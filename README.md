@@ -2,7 +2,7 @@
 
 ![License](https://img.shields.io/github/license/davestj/certm8)
 ![GitHub last commit](https://img.shields.io/github/last-commit/davestj/certm8)
-![Build Status](https://github.com/davestj/certm8/actions/workflows/build.yml/badge.svg)
+![Build Status](https://github.com/davestj/certm8/actions/workflows/dev-build.yml/badge.svg)
 
 Automated certificate management solution for Docker Desktop and Kubernetes environments, providing seamless SSL/TLS certificate generation and distribution for local development.
 
