@@ -1,7 +1,8 @@
-# Docker & Kubernetes Certificate Automation
+# Certm8: Docker & Kubernetes Certificate Automation
 
-![License](https://img.shields.io/github/license/davestj/docker-k8s-cert-automation)
-![GitHub last commit](https://img.shields.io/github/last-commit/davestj/docker-k8s-cert-automation)
+![License](https://img.shields.io/github/license/davestj/certm8)
+![GitHub last commit](https://img.shields.io/github/last-commit/davestj/certm8)
+![Build Status](https://github.com/davestj/certm8/actions/workflows/build.yml/badge.svg)
 
 Automated certificate management solution for Docker Desktop and Kubernetes environments, providing seamless SSL/TLS certificate generation and distribution for local development.
 
@@ -26,8 +27,8 @@ Automated certificate management solution for Docker Desktop and Kubernetes envi
 
 1. Clone the repository:
 ```bash
-git clone git@github.com:davestj/docker-k8s-cert-automation.git
-cd docker-k8s-cert-automation
+git clone git@github.com:davestj/certm8.git
+cd certm8
 ```
 
 2. Create required directories:
@@ -113,4 +114,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/davestj/docker-k8s-cert-automation/issues/new) on GitHub.
+If you encounter any issues or have questions, please [open an issue](https://github.com/davestj/certm8/issues/new) on GitHub.
+
+
