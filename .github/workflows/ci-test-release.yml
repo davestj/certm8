@@ -7,10 +7,6 @@ on:
   pull_request:
     branches:
       - dev
-  workflow_run:
-    workflows: ["CertM8 CI Test and Release Workflow"]
-    types:
-      - completed
 
 jobs:
   test:
@@ -80,4 +76,3 @@ jobs:
       run: |
         git tag v${{ env.new_version }}
         git push origin v${{ env.new_version }}
-
