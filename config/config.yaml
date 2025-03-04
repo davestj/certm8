@@ -1,0 +1,40 @@
+certificate_defaults:
+  organization: "Local Development"
+  country: "US"
+  state: "CA"
+  locality: "San Francisco"
+  validity_days: 365
+
+monitoring:
+  enabled: true
+  metrics_port: 9090
+  scrape_interval: 30s
+
+logging:
+  level: "INFO"
+  format: "json"
+  file: "/var/log/cert-manager.log"
+
+domains:
+  allowed_suffixes:
+    - ".local"
+    - ".dev"
+    - ".test"
+    - ".qa"
+  banned_suffixes:
+    - ".internal"
+    - ".example"
+    - ".invalid"
+
+certbot:
+  staging: true
+  email: "admin@local.dev"
+  preferred_challenges:
+    - "http-01"
+    - "dns-01"
+  renewal_days: 30
+
+kubernetes:
+  enabled: true
+  watch_namespaces: ["default", "cert-manager"]
+  label_selector: "cert-manager=enabled"

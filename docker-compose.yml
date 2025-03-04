@@ -1,0 +1,76 @@
+version: '3.8'
+
+networks:
+  cert-network:
+    name: cert-network
+    driver: bridge
+
+volumes:
+  certbot-certs:
+    name: certbot-certs
+  self-signed-certs:
+    name: self-signed-certs
+  prometheus-data:
+    name: prometheus-data
+
+services:
+  cert-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.cert-manager
+    container_name: cert-manager
+    ports:
+      - "15000:5000"  # API port
+      - "19090:9090"  # Prometheus metrics
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - certbot-certs:/etc/letsencrypt:rw
+      - self-signed-certs:/etc/ssl/self-signed:rw
+      - ./config:/app/config:ro
+      - ./certs:/app/certs:rw
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CERT_RENEWAL_INTERVAL=12h
+      - CERTBOT_STAGING=1
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - ENABLE_METRICS=true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "19091:9090"
+    depends_on:
+      - cert-manager
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "13000:3000"
+    volumes:
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    restart: unless-stopped

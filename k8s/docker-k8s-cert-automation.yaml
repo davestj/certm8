@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docker-k8s-cert-automation
+  labels:
+    name: docker-k8s-cert-automation
+    monitoring: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: docker-k8s-cert-automation-config
+  namespace: docker-k8s-cert-automation
+data:
+  config.yaml: |
+    certificate_defaults:
+      organization: "Local Development"
+      country: "US"
+      validity_days: 365
+    monitoring:
+      enabled: true
+      metrics_port: 19090
+    logging:
+      level: "DEBUG"
+      format: "json"
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    scrape_configs:
+      - job_name: 'docker-k8s-cert-automation'
+        static_configs:
+          - targets: ['localhost:19090']
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: docker-k8s-cert-automation
+  namespace: docker-k8s-cert-automation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: docker-k8s-cert-automation
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["extensions", "networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: docker-k8s-cert-automation
+subjects:
+  - kind: ServiceAccount
+    name: docker-k8s-cert-automation
+    namespace: docker-k8s-cert-automation
+roleRef:
+  kind: ClusterRole
+  name: docker-k8s-cert-automation
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: docker-k8s-cert-automation-pvc
+  namespace: docker-k8s-cert-automation
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-k8s-cert-automation
+  namespace: docker-k8s-cert-automation
+  labels:
+    app: docker-k8s-cert-automation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: docker-k8s-cert-automation
+  template:
+    metadata:
+      labels:
+        app: docker-k8s-cert-automation
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "19090"
+    spec:
+      serviceAccountName: docker-k8s-cert-automation
+      containers:
+        - name: docker-k8s-cert-automation
+          image: docker-k8s-cert-automation:latest
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 5000
+            - name: metrics
+              containerPort: 19090
+          env:
+            - name: KUBERNETES_MODE
+              value: "true"
+            - name: LOG_LEVEL
+              value: "DEBUG"
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: config
+              mountPath: /app/config
+            - name: certs
+              mountPath: /etc/ssl/self-signed
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "200m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: docker-k8s-cert-automation-config
+        - name: certs
+          persistentVolumeClaim:
+            claimName: docker-k8s-cert-automation-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: docker-k8s-cert-automation
+  namespace: docker-k8s-cert-automation
+  labels:
+    app: docker-k8s-cert-automation
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "19090"
+spec:
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 5000
+      targetPort: http
+      nodePort: 31500
+    - name: metrics
+      port: 19090
+      targetPort: metrics
+      nodePort: 31590
+  selector:
+    app: docker-k8s-cert-automation
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: docker-k8s-cert-automation
+  namespace: docker-k8s-cert-automation
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: cert-automation.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: docker-k8s-cert-automation
+                port:
+                  number: 5000
